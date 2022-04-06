@@ -1,0 +1,171 @@
+<?php
+/** @var KingfisherDirect\MailchimpExtras\Block\PreferencesForm $block */
+
+$member = $block->getMember();
+$fields = $block->getMergeFields();
+$interests = $block->getInterest();
+$postData = $block->getPostData();
+$errors = $block->getErrors() ?? [];
+
+$memberData = $member ? $member['merge_fields'] : [];
+$memberInterests = $member ? $member['interests'] : [];
+?>
+
+<form method="POST" class="form form-newsletter-preferences" data-mage-init='{"validation": {}}'>
+    <fieldset class="fieldset">
+        <?php if (!$member): ?>
+            <div class="field required">
+                <label class="label">E-Mail address</label>
+                <div class="control">
+                    <input
+                        type='text'
+                        name='member[email]'
+                        value="<?= $postData["email"] ?? '' ?>"
+                        class="control <?= $errors['email'] ?? false ? 'mage-error' : '' ?>"
+                        required
+                        data-validate='{"validate-email": true}' />
+                </div>
+                <?php foreach ($errors['email'] ?? [] as $error): ?>
+                    <div class="mage-error" for="member[email]">
+                        <?= $error; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif ?>
+    </fieldset>
+
+    <fieldset class="fieldset newsletter-groups">
+        <legend class="legend">Interests</legend>
+        <p class="description">
+            <?= __("Please select your interests, so we can send you only offers regarding products you're interested in") ?>
+        </p>
+
+        <?php foreach ($interests as $interest): ?>
+            <?php
+            $id = $interest["interest"]["id"];
+            $type = $interest["interest"]["type"];
+            $title = $interest["interest"]["title"];
+            $safeName = strtolower(preg_replace("/[^A-Za-z0-9]/", '', $title));
+
+            if ($type === "checkboxes") {
+                $inputType = "checkbox";
+            } elseif ($type === "radios") {
+                $inputType = "radio";
+            } else {
+                throw new \Exception(sprintf("Unexpected mailchimp interest type %s", $type));
+            }
+            ?>
+
+            <div id="mailchimp-interest-<?= $safeName; ?>" class="field">
+                <label class="label"><?= $title ?></label>
+                <div class="control">
+                    <?php foreach ($interest['category'] as $category): ?>
+                        <?php
+                        $id = $category['id'];
+                        $isChecked = ($postData && in_array($id, $postData['interest'])) || ($memberInterests[$id] ?? false);
+                        ?>
+
+                        <div class="field choice">
+                            <input
+                                id="interest-<?= $id ?>"
+                                type="<?= $inputType ?>"
+                                name="member[interest][<?= $id ?>]"
+                                value="<?= $id ?>"
+                                class="checkbox"
+                                <?= $isChecked ? "checked" : "" ?>
+                            />
+                            <label class="label" for="interest-<?= $id ?>">
+                                <?= $category['name'] ?>
+                            </label>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </fieldset>
+
+    <fieldset class="fieldset newsletter-data">
+        <legend class="legend">Profile</legend>
+        <p class="description">
+            <?= __("Enter your profile information details. This will allow us to tailor information to your needs") ?>
+        </p>
+
+        <?php foreach ($fields as $field): ?>
+            <?php
+            if ($field['public'] !== true) {
+                continue;
+            }
+
+            $tag = $field['tag'];
+            $required = $field['required'];
+            $tagErrors = $errors["data[${tag}]"] ?? false;
+            ?>
+
+            <div id="mailchimp-field-<?= strtolower($tag); ?>" class="field <?= $required ? "required" : "" ?>">
+                <label class="label"><?= $field["name"] ?></label>
+
+                <?php if ($field['type'] === 'dropdown'): ?>
+                    <?php
+                    $disabled = $required ? 'disabled' : '';
+                    $value = $postData['data'][$tag] ?? $memberData[$tag] ?? '';
+                    $isEmpty = !$value;
+                    ?>
+
+                    <select name='member[data][<?= $tag ?>]' class="control">
+                        <option
+                            value=""
+                            <?= $isEmpty ? 'selected' : '' ?>
+                            <?= $disabled ?>
+                        >
+                            - Select -
+                        </option>
+
+                        <?php foreach ($field['options']['choices'] as $choice): ?>
+                            <?php $selected = $choice === $value ? 'selected' : ''; ?>
+                            <option
+                                value="<?= $choice ?>"
+                                <?= $selected; ?>
+                            >
+                                <?= $choice ?>
+                            </option>
+                        <?php endforeach ?>
+                    </select>
+                <?php else: ?>
+                    <?php
+                        $type = in_array($field["type"], ["text", "number"]) ? $field['type'] : 'text';
+                    ?>
+
+                    <input
+                        type='<?= $type ?>'
+                        name='member[data][<?= $tag ?>]'
+                        value="<?= $postData["data"][$tag] ?? $memberData[$tag] ?? '' ?>"
+                        class="control <?= $tagErrors ? 'mage-error' : '' ?>"
+                        <?= $required ? 'required' : '' ?>
+                    />
+                <?php endif ?>
+
+                <?php foreach ($tagErrors ?: [] as $error): ?>
+                    <div class="mage-error" for="member[email]">
+                        <?= $error; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endforeach; ?>
+    </fieldset>
+
+    <div class="actions">
+        <button type="submit" class="action primary"><?= __("Save Marketing Preferences"); ?></button>
+    </div>
+
+    <p>
+        <small>
+            By submitting your details, you are giving your consent to receive updates on new product launches, useful guides and fantastic offers from us. If you wish to stop receiving these you can unsubscribe at any time.
+        </small>
+    </p>
+
+    <p>
+        <small>
+            For more information on how we use your data please see our <a href="<?= $block->getUrl("privacy-policy"); ?>">privacy policy</a>.
+        </small>
+    </p>
+</form>
