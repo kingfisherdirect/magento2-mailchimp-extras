@@ -9,7 +9,6 @@ use Magento\Framework\Data\Form\FormKey\Validator;
 use Magento\Framework\View\Result\PageFactory;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
-use function var_dump;
 
 class Index extends Action
 {
@@ -93,15 +92,11 @@ class Index extends Action
         $post['interest'] = $post['interest'] ?? [];
 
         if (is_array($post['interest'])) {
-            $interests = $member['interests'] ?? $this->getInterests();
+            $interests = $member['interests'] ?? [];
 
             foreach ($interests as $interest => $isInterested) {
                 $interests[$interest] = in_array($interest, $post['interest']);
             }
-        }
-
-        if (!$member && (!$post['email'] || !filter_var($post['email'], FILTER_VALIDATE_EMAIL))) {
-            $errors['email'] = [__("Please enter valid email address")];
         }
 
         $postMergeFields = is_array($post['data']) ? $post['data'] : null;
@@ -128,9 +123,7 @@ class Index extends Action
 
         if (empty($errors)) {
             try {
-                $saved = $member
-                    ? $members->update($listId, $member['id'], null, "subscribed", $postMergeFields, $interests)
-                    : $members->add($listId, "subscribed", $post['email'], null, $postMergeFields, $interests);
+                $saved = $members->update($listId, $member['id'], null, "subscribed", $postMergeFields, $interests);
 
                 $this->messageManager->addSuccess(__("Your preferences were successfully saved!"));
 
@@ -152,11 +145,6 @@ class Index extends Action
     private function getStoreId(): int
     {
         return $this->storeManager->getStore()->getId();
-    }
-
-    private function getInterests(): array
-    {
-        return $this->mailchimpData->getInterest($this->getStoreId());
     }
 
     private function getMergeFields(): array

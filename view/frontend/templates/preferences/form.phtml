@@ -42,7 +42,7 @@ $memberInterests = $member ? $member['interests'] : [];
 
         <?php foreach ($interests as $interest): ?>
             <?php
-            $id = $interest["interest"]["id"];
+            $groupId = $interest["interest"]["id"];
             $type = $interest["interest"]["type"];
             $title = $interest["interest"]["title"];
             $safeName = strtolower(preg_replace("/[^A-Za-z0-9]/", '', $title));
@@ -62,7 +62,7 @@ $memberInterests = $member ? $member['interests'] : [];
                     <?php foreach ($interest['category'] as $category): ?>
                         <?php
                         $id = $category['id'];
-                        $isChecked = ($postData && in_array($id, $postData['interest'])) || ($memberInterests[$id] ?? false);
+                        $isChecked = (isset($postData['interest']) && in_array($id, $postData['interest'])) || ($memberInterests[$id] ?? false);
                         ?>
 
                         <div class="field choice">
@@ -154,7 +154,7 @@ $memberInterests = $member ? $member['interests'] : [];
     </fieldset>
 
     <div class="actions">
-        <button type="submit" class="action primary"><?= __("Save Marketing Preferences"); ?></button>
+        <button type="submit" class="action primary"><?= $member ? __("Update Marketing Preferences") : __("Save Marketing Preferences"); ?></button>
     </div>
 
     <p>
