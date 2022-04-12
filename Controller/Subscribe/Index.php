@@ -9,7 +9,6 @@ use Magento\Framework\Data\Form\FormKey\Validator;
 use Magento\Framework\View\Result\PageFactory;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
-use function var_dump;
 
 class Index extends Action
 {
@@ -45,9 +44,6 @@ class Index extends Action
 
     public function execute()
     {
-        $params = $this->getRequest()->getParams();
-        $member = $params['memberId'] ?? null;
-
         $storeId = $this->storeManager->getStore()->getId();
 
         $api = $this->mailchimpData->getApi($storeId);
@@ -55,16 +51,6 @@ class Index extends Action
 
         /** @var \Mailchimp_ListsMembers **/
         $members = $api->lists->members;
-
-        if ($member) {
-            $search = $members->getAll($listId, null, null, 1, null, null, null, null, null, null, null, $member);
-
-            $member = count($search['members']) === 1 ? $search['members'][0] : null;
-
-            if (!$member) {
-                $this->messageManager->addWarning(__("We were not able to find your details, but you can subscribe from this page."));
-            }
-        }
 
         $resultPage = $this->pageFactory->create();
         $block = $resultPage->getLayout()->getBlock('newsletter.preferences_form');
@@ -82,24 +68,21 @@ class Index extends Action
                 $post['interest'] = $post['interest'] ?? [];
 
                 if (is_array($post['interest'])) {
-                    $interests = $member['interests'] ?? $this->getInterests();
+                    $interests = $this->getInterests();
 
                     foreach ($interests as $interest => $isInterested) {
                         $interests[$interest] = in_array($interest, $post['interest']);
                     }
                 }
 
-                if (!$member && (!$post['email'] || !filter_var($post['email'], FILTER_VALIDATE_EMAIL))) {
+                if (!$post['email'] || !filter_var($post['email'], FILTER_VALIDATE_EMAIL)) {
                     $errors['email'] = [__("Please enter valid email address")];
                 }
 
                 if (empty($errors)) {
                     try {
-                        $saved = $member
-                            ? $members->update($listId, $member['id'], null, "subscribed", $mergeFields, $interests)
-                            : $members->add($listId, "subscribed", $post['email'], null, $mergeFields, $interests);
-
-                        $this->messageManager->addSuccess(__("Your preferences were successfully saved!"));
+                        $saved = $members->add($listId, "subscribed", $post['email'], null, $mergeFields, $interests);
+                        $this->messageManager->addSuccess(__("You have been successfully subscribed to newsletter!"));
 
                         return $this->_redirect("newsletter/preferences", ["memberId" => $saved["unique_email_id"]]);
                     } catch (\Exception $e) {
@@ -115,16 +98,6 @@ class Index extends Action
             }
         }
 
-        if ($block) {
-            if ($member) {
-                $block->setMember($member);
-            }
-        }
-
-        if (!$member) {
-            $resultPage->getConfig()->getTitle()->set(__("Subscribe to Newsletter"));
-        }
-
         return $resultPage;
     }
 
@@ -135,18 +108,15 @@ class Index extends Action
 
     private function getInterests(): array
     {
-        return $this->mailchimpData->getInterest($this->getStoreId());
-    }
+        $interests = $this->mailchimpData->getInterest($this->getStoreId());
+        $ids = [];
 
-    private function getMergeFields(): array
-    {
-        $api = $this->mailchimpData->getApi($this->getStoreId());
-        $listId = $this->mailchimpData->getDefaultList();
-        /** @var \Mailchimp_ListsMergeFields **/
-        $mergeApi = $api->lists->mergeFields;
+        foreach ($interests as $interestGroup) {
+            foreach ($interestGroup['category'] as $category) {
+                $ids[$category['id']] = false;
+            }
+        }
 
-        $mergeFields = $mergeApi->getAll($listId, "merge_fields")["merge_fields"];
-
-        return $mergeFields;
+        return $ids;
     }
 }
