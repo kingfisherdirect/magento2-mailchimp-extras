@@ -81,7 +81,13 @@ class Index extends Action
 
                 if (empty($errors)) {
                     try {
-                        $saved = $members->add($listId, "subscribed", $post['email'], null, $mergeFields, $interests);
+                        $search = $members->getAll($listId, null, null, 1, null, null, null, null, null, null, null, $post['email']);
+                        $member = count($search['members']) === 1 ? $search['members'][0] : null;
+
+                        $saved = $member
+                            ? $members->update($listId, $member['id'], null, "subscribed", $postMergeFields, $interests)
+                            : $members->add($listId, "subscribed", $post['email'], null, $mergeFields, $interests);
+
                         $this->messageManager->addSuccess(__("You have been successfully subscribed to newsletter!"));
 
                         return $this->_redirect("newsletter/preferences", ["memberId" => $saved["unique_email_id"]]);
