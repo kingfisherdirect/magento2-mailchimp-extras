@@ -17,6 +17,6 @@
         }
     ],
     "require": {
-        "mailchimp/mc-magento2": "^102.3"
+        "mailchimp/mc-magento2": "^103.4"
     }
 }
