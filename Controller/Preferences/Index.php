@@ -117,7 +117,7 @@ class Index extends Action
             }
 
             if (empty($postMergeFields[$tag])) {
-                $errors["data[${tag}]"] = [__("This field is required")];
+                $errors["data[{$tag}]"] = [__("This field is required")];
             }
         }
 

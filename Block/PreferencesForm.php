@@ -15,8 +15,8 @@ class PreferencesForm extends Template
 
     public function __construct(
         Context $context,
+        Data $mailchimpData,
         array $data = [],
-        Data $mailchimpData
     ) {
         parent::__construct($context, $data);
 
