@@ -101,7 +101,7 @@ $memberInterests = $member ? $member['interests'] : [];
 
             $tag = $field['tag'];
             $required = $field['required'];
-            $tagErrors = $errors["data[${tag}]"] ?? false;
+            $tagErrors = $errors["data[{$tag}]"] ?? false;
             ?>
 
             <div id="mailchimp-field-<?= strtolower($tag); ?>" class="field <?= $required ? "required" : "" ?>">
